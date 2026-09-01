@@ -334,6 +334,9 @@ select.input option { background: #071428; color: var(--text-primary); }
 .badge-inactive     { background: rgba(255,255,255,0.04); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.08); }
 .badge-inactive::before   { background: var(--text-muted); }
 
+.badge-stopped      { background: var(--yellow-dim); color: var(--yellow); border: 1px solid rgba(255,224,102,0.25); }
+.badge-stopped::before    { background: var(--yellow); }
+
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.45; transform: scale(0.65); }

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Send, Zap, AlertCircle, CheckCircle2, Clock,
   RefreshCw, ExternalLink, HelpCircle, ChevronDown, ChevronUp,
-  BookOpen,
+  BookOpen, Square,
 } from "lucide-react";
 import { api } from "../api";
 
@@ -90,16 +90,18 @@ function CookieGuide() {
 }
 
 /* ─── Task Progress Card ────────────────────────────────────── */
-function TaskProgressCard({ task, onRefresh, isPolling }) {
+function TaskProgressCard({ task, onRefresh, onStop, isPolling, stopping }) {
+  const isStoppable = task.status === "pending" || task.status === "in_progress";
+
   const steps = [
-    { key: "pending",     label: "Task diterima server",       icon: <Clock size={13} /> },
+    { key: "pending",     label: "Task diterima server",        icon: <Clock size={13} /> },
     { key: "in_progress", label: "Browser automation berjalan", icon: <div className="spinner spinner-sm" /> },
     { key: "success",     label: "Tombol Like berhasil diklik", icon: <CheckCircle2 size={13} /> },
+    { key: "stopped",     label: "Task dihentikan pengguna",    icon: <Square size={13} /> },
     { key: "failed",      label: "Task gagal",                  icon: <AlertCircle size={13} /> },
   ];
 
-  const order = ["pending", "in_progress", "success", "failed"];
-  const curIdx = order.indexOf(task.status);
+  const order = ["pending", "in_progress", "success", "stopped", "failed"];
 
   return (
     <div className="card" style={{ marginTop: 0 }}>
@@ -108,11 +110,26 @@ function TaskProgressCard({ task, onRefresh, isPolling }) {
         <h2>Status Task</h2>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
           <LiveIndicator active={isPolling} />
+          {isStoppable && (
+            <button
+              className="btn btn-sm"
+              onClick={onStop}
+              disabled={stopping}
+              title="Hentikan task"
+              style={{
+                background: "var(--red-dim)", color: "var(--red)",
+                border: "1px solid rgba(255,77,106,0.35)",
+                padding: "5px 10px", fontSize: 12,
+              }}
+            >
+              {stopping ? <div className="spinner spinner-sm" /> : <Square size={12} />}
+              {stopping ? "Menghentikan…" : "Stop Task"}
+            </button>
+          )}
           <button
             className="btn-icon btn-sm"
             onClick={onRefresh}
             aria-label="Refresh status"
-            title="Refresh status"
           >
             <RefreshCw size={13} />
           </button>
@@ -153,35 +170,51 @@ function TaskProgressCard({ task, onRefresh, isPolling }) {
             <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Progress</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
               {steps.map(({ key, label, icon }, idx) => {
+                const order = ["pending", "in_progress", "success", "stopped", "failed"];
+                const curIdx  = order.indexOf(task.status);
                 const itemIdx = order.indexOf(key);
-                const isDone    = curIdx > itemIdx || (curIdx === itemIdx && task.status === "success");
-                const isCurrent = curIdx === itemIdx;
-                const isFailed  = task.status === "failed" && key === "failed";
-                const isSkipped = task.status === "success" && key === "failed";
 
-                if (isSkipped) return null;
+                const isTerminal = ["success", "stopped", "failed"].includes(task.status);
+                const isDone     = isTerminal && curIdx > itemIdx && key !== "stopped" && key !== "failed";
+                const isCurrent  = task.status === key;
+
+                // hide irrelevant terminal steps
+                if (task.status === "success"  && (key === "stopped" || key === "failed")) return null;
+                if (task.status === "stopped"  && key === "failed") return null;
+                if (task.status === "failed"   && key === "stopped") return null;
 
                 let color = "var(--text-muted)";
-                if (isDone)  color = "var(--green)";
-                if (isCurrent && !isDone) color = "var(--cyan)";
-                if (isFailed) color = "var(--red)";
+                if (isDone)    color = "var(--green)";
+                if (isCurrent) {
+                  if (key === "success") color = "var(--green)";
+                  else if (key === "failed" || key === "stopped") color = key === "stopped" ? "var(--yellow)" : "var(--red)";
+                  else color = "var(--cyan)";
+                }
 
-                const isLast = idx === steps.length - 1 || task.status === "success";
+                const isLast = idx === steps.length - 1;
 
                 return (
                   <div key={key} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                    {/* connector line + icon */}
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 20, flexShrink: 0 }}>
                       <div style={{ color, display: "flex", alignItems: "center", justifyContent: "center", width: 20, height: 20 }}>
-                        {isCurrent && !isDone && !isFailed ? <div className="spinner spinner-sm" style={{ borderTopColor: color }} /> : icon}
+                        {isCurrent && key === "in_progress"
+                          ? <div className="spinner spinner-sm" style={{ borderTopColor: color }} />
+                          : icon}
                       </div>
-                      {!isLast && <div style={{ width: 1, flex: 1, minHeight: 10, background: color === "var(--green)" ? "rgba(0,255,163,0.25)" : "rgba(0,210,255,0.10)", margin: "2px 0" }} />}
+                      {!isLast && (
+                        <div style={{
+                          width: 1, flex: 1, minHeight: 10,
+                          background: isDone ? "rgba(0,255,163,0.25)" : "rgba(0,210,255,0.08)",
+                          margin: "2px 0",
+                        }} />
+                      )}
                     </div>
-                    {/* label */}
                     <div style={{ paddingBottom: 12, color, fontSize: 13 }}>
                       {label}
                       {isCurrent && key === "in_progress" && (
-                        <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 6 }}>— estimasi 20–60 detik</span>
+                        <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 6 }}>
+                          — estimasi 20–60 detik
+                        </span>
                       )}
                     </div>
                   </div>
@@ -197,12 +230,13 @@ function TaskProgressCard({ task, onRefresh, isPolling }) {
 
 /* ─── Main Page ─────────────────────────────────────────────── */
 export default function AutoLike({ toast }) {
-  const [accounts, setAccounts]   = useState([]);
-  const [accountId, setAccountId] = useState("");
-  const [targetUrl, setTargetUrl] = useState("");
+  const [accounts,   setAccounts]   = useState([]);
+  const [accountId,  setAccountId]  = useState("");
+  const [targetUrl,  setTargetUrl]  = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [task, setTask]             = useState(null);
-  const [isPolling, setIsPolling]   = useState(false);
+  const [stopping,   setStopping]   = useState(false);
+  const [task,       setTask]       = useState(null);
+  const [isPolling,  setIsPolling]  = useState(false);
 
   /* load active accounts */
   useEffect(() => {
@@ -217,7 +251,8 @@ export default function AutoLike({ toast }) {
 
   /* poll task status until terminal */
   useEffect(() => {
-    if (!task || task.status === "success" || task.status === "failed") {
+    const terminal = ["success", "failed", "stopped"];
+    if (!task || terminal.includes(task.status)) {
       setIsPolling(false);
       return;
     }
@@ -226,13 +261,16 @@ export default function AutoLike({ toast }) {
       try {
         const targets = await api.listTargets();
         const match = targets.find((t) => t.id === task.target_id);
-        if (match) {
+        if (match && match.status !== task.status) {
           setTask((prev) => ({ ...prev, status: match.status }));
           if (match.status === "success") {
             toast.push("Berhasil! 👍", `Task #${task.target_id} selesai — postingan berhasil di-like!`, "success");
             clearInterval(iv); setIsPolling(false);
           } else if (match.status === "failed") {
             toast.push("Task Gagal", `Task #${task.target_id} gagal. Periksa log untuk detail.`, "error");
+            clearInterval(iv); setIsPolling(false);
+          } else if (match.status === "stopped") {
+            toast.push("Task Dihentikan", `Task #${task.target_id} berhasil dihentikan.`, "info");
             clearInterval(iv); setIsPolling(false);
           }
         }
@@ -252,15 +290,27 @@ export default function AutoLike({ toast }) {
     }
   };
 
+  const handleStop = async () => {
+    if (!task) return;
+    setStopping(true);
+    try {
+      await api.stopTarget(task.target_id);
+      setTask((prev) => ({ ...prev, status: "stopped" }));
+      setIsPolling(false);
+      toast.push("Task Dihentikan", `Task #${task.target_id} berhasil dihentikan.`, "info");
+    } catch (err) {
+      toast.push("Gagal Stop", err.message, "error");
+    }
+    setStopping(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!accountId || !targetUrl.trim()) return;
-
     if (!targetUrl.includes("facebook.com")) {
       toast.push("URL Tidak Valid", "Masukkan link postingan Facebook yang valid", "error");
       return;
     }
-
     setSubmitting(true);
     setTask(null);
     try {
@@ -395,7 +445,13 @@ https://www.facebook.com/username/posts/...`}</pre>
         {/* ── Right: Progress ────────────────────────────────── */}
         <div>
           {task ? (
-            <TaskProgressCard task={task} onRefresh={handleRefresh} isPolling={isPolling} />
+            <TaskProgressCard
+              task={task}
+              onRefresh={handleRefresh}
+              onStop={handleStop}
+              isPolling={isPolling}
+              stopping={stopping}
+            />
           ) : (
             <div className="card">
               <div className="card-inner">
