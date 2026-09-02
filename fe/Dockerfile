@@ -1,5 +1,5 @@
 # Gunakan base image Node.js versi Alpine (ringan)
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Tentukan folder kerja di dalam container
 WORKDIR /app
@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Installdependencies
-RUN npm install
+RUN rm -f package-lock.json && npm install
 
 # Salin seluruh sisa file project ke dalam container
 COPY . .

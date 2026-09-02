@@ -855,3 +855,59 @@ code {
   letter-spacing: 0.8px;
   margin-bottom: 2px;
 }
+
+/* ── Filter Chip: Stopped ──────────────────────────────────── */
+.filter-chip.active-stopped { border-color: rgba(255,224,102,0.40); color: var(--yellow); background: rgba(255,224,102,0.08); }
+
+/* ── Action Buttons (Dashboard table) ──────────────────────── */
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: transparent;
+  flex-shrink: 0;
+}
+.btn-action:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.btn-action-delete {
+  color: var(--red);
+  border-color: rgba(255, 77, 106, 0.20);
+  background: rgba(255, 77, 106, 0.06);
+}
+.btn-action-delete:hover:not(:disabled) {
+  background: rgba(255, 77, 106, 0.18);
+  border-color: rgba(255, 77, 106, 0.50);
+  box-shadow: 0 0 12px rgba(255, 77, 106, 0.25);
+  transform: scale(1.12);
+}
+.btn-action-delete:active:not(:disabled) {
+  transform: scale(0.95);
+  box-shadow: 0 0 6px rgba(255, 77, 106, 0.15);
+}
+
+.btn-action-stop {
+  color: var(--yellow);
+  border-color: rgba(255, 224, 102, 0.20);
+  background: rgba(255, 224, 102, 0.06);
+}
+.btn-action-stop:hover:not(:disabled) {
+  background: rgba(255, 224, 102, 0.18);
+  border-color: rgba(255, 224, 102, 0.50);
+  box-shadow: 0 0 12px rgba(255, 224, 102, 0.25);
+  transform: scale(1.12);
+}
+.btn-action-stop:active:not(:disabled) {
+  transform: scale(0.95);
+  box-shadow: 0 0 6px rgba(255, 224, 102, 0.15);
+}

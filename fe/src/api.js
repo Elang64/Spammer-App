@@ -36,8 +36,9 @@ export const api = {
 
   // Auto-like & targets
   autoLike:    (account_id, target_url) => request("POST", "/api/auto-like", { account_id, target_url }),
-  stopTarget:  (id) => request("POST", `/api/targets/${id}/stop`),
-  listTargets: ()   => request("GET",  "/api/targets"),
+  stopTarget:   (id) => request("POST", `/api/targets/${id}/stop`),
+  deleteTarget: (id) => request("DELETE", `/api/targets/${id}`),
+  listTargets:  ()   => request("GET",  "/api/targets"),
 
   // Logs
   listLogs: () => request("GET", "/api/logs"),

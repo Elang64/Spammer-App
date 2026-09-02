@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import {
   Activity, Users, Target, CheckCircle, XCircle,
-  Clock, RefreshCw, Search, Square,
+  Clock, RefreshCw, Search, Square, Trash2, StopCircle,
 } from "lucide-react";
 import { api } from "../api";
 
@@ -85,6 +85,10 @@ export default function Dashboard({ toast }) {
   const [accounts, setAccounts] = useState([]);
   const [loading,  setLoading]  = useState(true);
 
+  /* action loading states */
+  const [deletingId, setDeletingId] = useState(null);
+  const [stoppingId, setStoppingId] = useState(null);
+
   /* filters */
   const [taskSearch, setTaskSearch] = useState("");
   const [taskFilter, setTaskFilter] = useState("all");
@@ -119,6 +123,35 @@ export default function Dashboard({ toast }) {
     const iv = setInterval(loadAll, 6000);
     return () => clearInterval(iv);
   }, []);
+
+  /* delete a target task */
+  const handleDeleteTarget = async (id) => {
+    if (!window.confirm(`Hapus task #${id}? Data log terkait juga akan dihapus.`)) return;
+    setDeletingId(id);
+    try {
+      await api.deleteTarget(id);
+      setTargets((prev) => prev.filter((t) => t.id !== id));
+      toast.push("Task Dihapus", `Task #${id} berhasil dihapus.`, "success");
+      loadStats();
+    } catch (err) {
+      toast.push("Gagal Hapus", err.message, "error");
+    }
+    setDeletingId(null);
+  };
+
+  /* stop a running/pending task */
+  const handleStopTarget = async (id) => {
+    setStoppingId(id);
+    try {
+      await api.stopTarget(id);
+      setTargets((prev) => prev.map((t) => t.id === id ? { ...t, status: "stopped" } : t));
+      toast.push("Task Dihentikan", `Task #${id} berhasil dihentikan.`, "info");
+      loadStats();
+    } catch (err) {
+      toast.push("Gagal Stop", err.message, "error");
+    }
+    setStoppingId(null);
+  };
 
   /* resolved stat values — sinkron dengan format /api/stats remote */
   const s = {
@@ -266,19 +299,57 @@ export default function Dashboard({ toast }) {
                     <th>URL Target</th>
                     <th>Status</th>
                     <th>Dibuat</th>
+                    <th style={{ textAlign: "center", width: 100 }}>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredTargets.map((t) => (
-                    <tr key={t.id}>
-                      <td className="td-mono" style={{ color: "var(--text-muted)" }}>{t.id}</td>
-                      <td className="td-url" title={t.url_post}>{t.url_post}</td>
-                      <td><StatusBadge status={t.status} /></td>
-                      <td className="td-mono" style={{ fontSize: 11 }}>
-                        {new Date(t.created_at).toLocaleString("id-ID")}
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredTargets.map((t) => {
+                    const isDeletable = ["pending", "failed", "stopped"].includes(t.status);
+                    const isStoppable = ["pending", "in_progress"].includes(t.status);
+                    return (
+                      <tr key={t.id}>
+                        <td className="td-mono" style={{ color: "var(--text-muted)" }}>{t.id}</td>
+                        <td className="td-url" title={t.url_post}>{t.url_post}</td>
+                        <td><StatusBadge status={t.status} /></td>
+                        <td className="td-mono" style={{ fontSize: 11 }}>
+                          {new Date(t.created_at).toLocaleString("id-ID")}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+                            {isStoppable && (
+                              <button
+                                className="btn-action btn-action-stop"
+                                onClick={() => handleStopTarget(t.id)}
+                                disabled={stoppingId === t.id}
+                                title="Hentikan task"
+                                aria-label={`Stop task ${t.id}`}
+                              >
+                                {stoppingId === t.id
+                                  ? <span className="spinner spinner-sm" />
+                                  : <StopCircle size={14} />}
+                              </button>
+                            )}
+                            {isDeletable && (
+                              <button
+                                className="btn-action btn-action-delete"
+                                onClick={() => handleDeleteTarget(t.id)}
+                                disabled={deletingId === t.id}
+                                title="Hapus task"
+                                aria-label={`Hapus task ${t.id}`}
+                              >
+                                {deletingId === t.id
+                                  ? <span className="spinner spinner-sm" />
+                                  : <Trash2 size={14} />}
+                              </button>
+                            )}
+                            {!isDeletable && !isStoppable && (
+                              <span style={{ color: "var(--text-muted)", fontSize: 11 }}>—</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
